@@ -25,7 +25,7 @@ namespace BrainstormSessions.Controllers
 
         public async Task<IActionResult> Index()
         {
-            _logger.LogCritical("Index request received");
+            _logger.LogInformation("Index request received");
 
             var sessionList = await _sessionRepository.ListAsync();
 

@@ -6,100 +6,120 @@ using BrainstormSessions.Api;
 using BrainstormSessions.Controllers;
 using BrainstormSessions.Core.Interfaces;
 using BrainstormSessions.Core.Model;
-using log4net.Appender;
-using log4net.Config;
-using log4net.Core;
 using Microsoft.Extensions.Logging;
 using Moq;
+using Serilog;
 using Xunit;
+using Serilog.Sinks.TestCorrelator;
+using FluentAssertions;
+using Serilog.Extensions.Logging;
 
 namespace BrainstormSessions.Test.UnitTests
 {
-    public class LoggingTests : IDisposable
+    public class LoggingTests
     {
-        private readonly MemoryAppender _appender;
-
-        public LoggingTests()
-        {
-            _appender = new MemoryAppender();
-            BasicConfigurator.Configure(_appender);
-        }
-
-        public void Dispose()
-        {
-            _appender.Clear();
-        }
 
         [Fact]
         public async Task HomeController_Index_LogInfoMessages()
         {
             // Arrange
+            var serilogLogger = new LoggerConfiguration().WriteTo.TestCorrelator().CreateLogger();
+            var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<HomeController>();
             var mockRepo = new Mock<IBrainstormSessionRepository>();
-            var stubLogger = new Mock<ILogger<HomeController>>();
+            
             mockRepo.Setup(repo => repo.ListAsync())
                 .ReturnsAsync(GetTestSessions());
-            var controller = new HomeController(mockRepo.Object, stubLogger.Object);
 
-            // Act
-            var result = await controller.Index();
+            var controller = new HomeController(mockRepo.Object, logger);
 
-            // Assert
-            var logEntries = _appender.GetEvents();
-            Assert.True(logEntries.Any(l => l.Level == Level.Info), "Expected Info messages in the logs");
+            using (TestCorrelator.CreateContext())
+            {
+                // Act
+                var result = await controller.Index();
+
+                // Assert
+                TestCorrelator.GetLogEventsFromCurrentContext()
+                    .Should().ContainSingle()
+                    .Which.Level
+                    .Should().Be(Serilog.Events.LogEventLevel.Information);
+            }
         }
 
-        //[Fact]
-        //public async Task HomeController_IndexPost_LogWarningMessage_WhenModelStateIsInvalid()
-        //{
-        //    // Arrange
-        //    var mockRepo = new Mock<IBrainstormSessionRepository>();
-        //    mockRepo.Setup(repo => repo.ListAsync())
-        //        .ReturnsAsync(GetTestSessions());
-        //    var controller = new HomeController(mockRepo.Object);
-        //    controller.ModelState.AddModelError("SessionName", "Required");
-        //    var newSession = new HomeController.NewSessionModel();
+        [Fact]
+        public async Task HomeController_IndexPost_LogWarningMessage_WhenModelStateIsInvalid()
+        {
+            // Arrange
+            var serilogLogger = new LoggerConfiguration().WriteTo.TestCorrelator().CreateLogger();
+            var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<HomeController>();
+            var mockRepo = new Mock<IBrainstormSessionRepository>();
+            mockRepo.Setup(repo => repo.ListAsync())
+                .ReturnsAsync(GetTestSessions());
 
-        //    // Act
-        //    var result = await controller.Index(newSession);
+            var controller = new HomeController(mockRepo.Object, logger);
+            controller.ModelState.AddModelError("SessionName", "Required");
+            var newSession = new HomeController.NewSessionModel();
 
-        //    // Assert
-        //    var logEntries = _appender.GetEvents();
-        //    Assert.True(logEntries.Any(l => l.Level == Level.Warn), "Expected Warn messages in the logs");
-        //}
+            using (TestCorrelator.CreateContext())
+            {
+                // Act
+                var result = await controller.Index(newSession);
+
+                // Assert
+                TestCorrelator.GetLogEventsFromCurrentContext()
+                    .Should().ContainSingle()
+                    .Which.Level
+                    .Should().Be(Serilog.Events.LogEventLevel.Warning, "Expected Warn messages in the logs");
+            }
+        }
 
         [Fact]
         public async Task IdeasController_CreateActionResult_LogErrorMessage_WhenModelStateIsInvalid()
         {
             // Arrange & Act
+            var serilogLogger = new LoggerConfiguration().WriteTo.TestCorrelator().CreateLogger();
+            var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<IdeasController>();
             var mockRepo = new Mock<IBrainstormSessionRepository>();
-            var controller = new IdeasController(mockRepo.Object);
+            var controller = new IdeasController(mockRepo.Object, logger);
             controller.ModelState.AddModelError("error", "some error");
 
-            // Act
-            var result = await controller.CreateActionResult(model: null);
+            using (TestCorrelator.CreateContext()) {
+                // Act
+                var result = await controller.CreateActionResult(model: null);
 
-            // Assert
-            var logEntries = _appender.GetEvents();
-            Assert.True(logEntries.Any(l => l.Level == Level.Error), "Expected Error messages in the logs");
+                // Assert
+                TestCorrelator.GetLogEventsFromCurrentContext()
+                    .Should().ContainSingle()
+                    .Which.Level
+                    .Should().Be(Serilog.Events.LogEventLevel.Error, "Expected Error messages in the logs");
+            }
         }
 
         [Fact]
         public async Task SessionController_Index_LogDebugMessages()
         {
             // Arrange
+            var serilogLogger = new LoggerConfiguration().MinimumLevel.Debug().WriteTo.TestCorrelator().CreateLogger();
+            var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<SessionController>();
             int testSessionId = 1;
             var mockRepo = new Mock<IBrainstormSessionRepository>();
             mockRepo.Setup(repo => repo.GetByIdAsync(testSessionId))
                 .ReturnsAsync(GetTestSessions().FirstOrDefault(
                     s => s.Id == testSessionId));
-            var controller = new SessionController(mockRepo.Object);
+            var controller = new SessionController(mockRepo.Object, logger);
 
-            // Act
-            var result = await controller.Index(testSessionId);
 
-            // Assert
-            var logEntries = _appender.GetEvents();
-            Assert.True(logEntries.Count(l => l.Level == Level.Debug) == 2, "Expected 2 Debug messages in the logs");
+            using (TestCorrelator.CreateContext())
+            {
+                // Act
+                var result = await controller.Index(testSessionId);
+                var logs = TestCorrelator.GetLogEventsFromCurrentContext();
+
+                // Assert
+                Assert.True(
+                    logs.Count(l => l.Level == Serilog.Events.LogEventLevel.Debug) == 2,
+                    "Expected 2 Debug messages in the logs"
+                );
+            }
         }
 
         private List<BrainstormSession> GetTestSessions()

@@ -33,14 +33,18 @@ namespace BrainstormSessions.Controllers
                 return Content("Session not found.");
             }
 
-            var viewModel = new StormSessionViewModel()
+            _logger.LogDebug("Session: {@session}", session);
+
+            var sessionViewModel = new StormSessionViewModel()
             {
                 DateCreated = session.DateCreated,
                 Name = session.Name,
                 Id = session.Id
             };
 
-            return View(viewModel);
+            _logger.LogDebug("Session VM: {@sessionVm}", sessionViewModel);
+
+            return View(sessionViewModel);
         }
     }
 }

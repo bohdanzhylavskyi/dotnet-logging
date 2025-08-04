@@ -50,7 +50,7 @@ namespace BrainstormSessions.Api
         {
             if (!ModelState.IsValid)
             {
-                LogInvalidIdeaCreationModelWarning(model);
+                LogInvalidIdeaCreationModelError(model);
                 return BadRequest(ModelState);
             }
 
@@ -113,7 +113,7 @@ namespace BrainstormSessions.Api
         {
             if (!ModelState.IsValid)
             {
-                LogInvalidIdeaCreationModelWarning(model);
+                LogInvalidIdeaCreationModelError(model);
                 return BadRequest(ModelState);
             }
 
@@ -146,9 +146,9 @@ namespace BrainstormSessions.Api
             _logger.LogWarning("Session with id={sessionId} was not found", sessionId);
         }
 
-        private void LogInvalidIdeaCreationModelWarning(NewIdeaModel model)
+        private void LogInvalidIdeaCreationModelError(NewIdeaModel model)
         {
-            _logger.LogWarning("Invalid model for idea creation: {@model}", model);
+            _logger.LogError("Invalid model for idea creation: {@model}", model);
         }
 
         private void LogNewlyCreatedIdeaInstanceDebug(Idea idea, int sessionId)
