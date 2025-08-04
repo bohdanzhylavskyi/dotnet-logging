@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
@@ -25,9 +26,19 @@ namespace BrainstormSessions.Controllers
 
         public async Task<IActionResult> Index()
         {
-            _logger.LogInformation("Index request received");
+            _logger.LogInformation("[GET /Index] Request received");
 
-            var sessionList = await _sessionRepository.ListAsync();
+            List<BrainstormSession> sessionList;
+
+            try
+            {
+                sessionList = await _sessionRepository.ListAsync();
+            } catch (Exception e)
+            {
+                _logger.LogError(e, "[GET /Index] Failed to retrieve list of brainstorm sessions");
+
+                throw;
+            }
 
             var model = sessionList.Select(session => new StormSessionViewModel()
             {
@@ -36,6 +47,8 @@ namespace BrainstormSessions.Controllers
                 Name = session.Name,
                 IdeaCount = session.Ideas.Count
             });
+
+            _logger.LogDebug("[GET /Index] ViewModel: {@model}", model);
 
             return View(model);
         }
@@ -49,24 +62,33 @@ namespace BrainstormSessions.Controllers
         [HttpPost]
         public async Task<IActionResult> Index(NewSessionModel model)
         {
+            _logger.LogInformation("[POST /Index] Request received");
+
+
             if (!ModelState.IsValid)
             {
-                _logger.LogWarning("Invalid new session model was submitted: {@model}", model);
+                _logger.LogWarning("[POST /Index] Invalid new session model was submitted: {@model}", model);
 
                 return BadRequest(ModelState);
             }
-            else
+
+            var session = new BrainstormSession()
             {
-                var session = new BrainstormSession()
-                {
-                    DateCreated = DateTimeOffset.Now,
-                    Name = model.SessionName
-                };
+                DateCreated = DateTimeOffset.Now,
+                Name = model.SessionName
+            };
 
+            try
+            {
                 await _sessionRepository.AddAsync(session);
+            } catch (Exception e)
+            {
+                _logger.LogError(e, "[POST /Index] Failed to create new brainstorm session");
 
-                _logger.LogInformation("New brainstorm session was created: {@session}", session);
+                throw;
             }
+
+            _logger.LogDebug("[POST /Index] New brainstorm session was created: {@session}", session);
 
             return RedirectToAction(actionName: nameof(Index));
         }

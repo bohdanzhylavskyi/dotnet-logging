@@ -57,6 +57,7 @@ namespace BrainstormSessions.Test.UnitTests
 
             var controller = new HomeController(mockRepo.Object, logger);
             controller.ModelState.AddModelError("SessionName", "Required");
+            
             var newSession = new HomeController.NewSessionModel();
 
             using (TestCorrelator.CreateContext())
@@ -65,10 +66,11 @@ namespace BrainstormSessions.Test.UnitTests
                 var result = await controller.Index(newSession);
 
                 // Assert
-                TestCorrelator.GetLogEventsFromCurrentContext()
-                    .Should().ContainSingle()
-                    .Which.Level
-                    .Should().Be(Serilog.Events.LogEventLevel.Warning, "Expected Warn messages in the logs");
+                Assert.True(
+                    TestCorrelator.GetLogEventsFromCurrentContext()
+                        .Any(l => l.Level == Serilog.Events.LogEventLevel.Warning),
+                     "Expected Warn messages in the logs"
+                );
             }
         }
 
@@ -79,12 +81,13 @@ namespace BrainstormSessions.Test.UnitTests
             var serilogLogger = new LoggerConfiguration().WriteTo.TestCorrelator().CreateLogger();
             var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<IdeasController>();
             var mockRepo = new Mock<IBrainstormSessionRepository>();
+            
             var controller = new IdeasController(mockRepo.Object, logger);
             controller.ModelState.AddModelError("error", "some error");
 
             using (TestCorrelator.CreateContext()) {
                 // Act
-                var result = await controller.CreateActionResult(model: null);
+                var result = await controller.Create(model: null);
 
                 // Assert
                 TestCorrelator.GetLogEventsFromCurrentContext()
@@ -102,11 +105,12 @@ namespace BrainstormSessions.Test.UnitTests
             var logger = new SerilogLoggerFactory(serilogLogger).CreateLogger<SessionController>();
             int testSessionId = 1;
             var mockRepo = new Mock<IBrainstormSessionRepository>();
+            
             mockRepo.Setup(repo => repo.GetByIdAsync(testSessionId))
                 .ReturnsAsync(GetTestSessions().FirstOrDefault(
                     s => s.Id == testSessionId));
-            var controller = new SessionController(mockRepo.Object, logger);
 
+            var controller = new SessionController(mockRepo.Object, logger);
 
             using (TestCorrelator.CreateContext())
             {
