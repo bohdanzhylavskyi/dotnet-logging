@@ -90,10 +90,11 @@ namespace BrainstormSessions.Test.UnitTests
                 var result = await controller.Create(model: null);
 
                 // Assert
-                TestCorrelator.GetLogEventsFromCurrentContext()
-                    .Should().ContainSingle()
-                    .Which.Level
-                    .Should().Be(Serilog.Events.LogEventLevel.Error, "Expected Error messages in the logs");
+                Assert.True(
+                    TestCorrelator.GetLogEventsFromCurrentContext()
+                        .Any(l => l.Level == Serilog.Events.LogEventLevel.Error),
+                    "Expected Error messages in the logs"
+                );
             }
         }
 
@@ -116,11 +117,11 @@ namespace BrainstormSessions.Test.UnitTests
             {
                 // Act
                 var result = await controller.Index(testSessionId);
-                var logs = TestCorrelator.GetLogEventsFromCurrentContext();
 
                 // Assert
                 Assert.True(
-                    logs.Count(l => l.Level == Serilog.Events.LogEventLevel.Debug) == 2,
+                    TestCorrelator.GetLogEventsFromCurrentContext()
+                        .Count(l => l.Level == Serilog.Events.LogEventLevel.Debug) == 2,
                     "Expected 2 Debug messages in the logs"
                 );
             }

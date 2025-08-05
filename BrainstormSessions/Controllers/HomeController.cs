@@ -88,6 +88,7 @@ namespace BrainstormSessions.Controllers
                 throw;
             }
 
+            _logger.LogInformation("[POST /Index] New brainstorm session was created: sessionId={@sessionId}", session.Id);
             _logger.LogDebug("[POST /Index] New brainstorm session was created: {@session}", session);
 
             return RedirectToAction(actionName: nameof(Index));

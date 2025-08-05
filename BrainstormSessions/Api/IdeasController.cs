@@ -69,7 +69,7 @@ namespace BrainstormSessions.Api
                 session = await _sessionRepository.GetByIdAsync(model.SessionId);
             } catch (Exception e)
             {
-                _logger.LogError("[POST /create] Failed to get session by id={sessionId}", model.SessionId);
+                _logger.LogError(e, "[POST /create] Failed to get session by id={sessionId}", model.SessionId);
 
                 throw;
             }
