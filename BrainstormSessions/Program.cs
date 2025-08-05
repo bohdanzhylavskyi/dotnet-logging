@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using System.IO;
-using System;
 
 
 namespace BrainstormSessions
@@ -13,15 +10,7 @@ namespace BrainstormSessions
     {
         public static void Main(string[] args)
         {
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json")
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
-                .Build();
-
-            Log.Logger = new LoggerConfiguration()
-                            .ReadFrom.Configuration(configuration)
-                            .CreateLogger();
+            Log.Logger = new LoggerConfiguration().CreateLogger();
 
             CreateHostBuilder(args).Build().Run();
         }
@@ -35,7 +24,10 @@ namespace BrainstormSessions
                 .ConfigureLogging((logging) =>
                 {
                     logging.ClearProviders();
-                    logging.AddSerilog();
-                });
-    }
+                })
+                .UseSerilog(
+                    (hostingContext, loggerConfiguration) =>
+                        loggerConfiguration.ReadFrom.Configuration(hostingContext.Configuration)
+                );
+        }
 }
