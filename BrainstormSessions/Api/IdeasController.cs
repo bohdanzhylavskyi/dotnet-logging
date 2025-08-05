@@ -10,6 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace BrainstormSessions.Api
 {
+    [ApiController]
+    [Route("api/[controller]")]
     public class IdeasController : ControllerBase
     {
         private readonly IBrainstormSessionRepository _sessionRepository;
@@ -45,7 +47,7 @@ namespace BrainstormSessions.Api
                 DateCreated = idea.DateCreated
             }).ToList();
 
-            _logger.LogWarning("[GET /forsession/{{sessionId}}] Ideas: {@ideas}", ideas);
+            _logger.LogDebug("[GET /forsession/{{sessionId}}] Ideas: {@ideas}", ideas);
 
             return Ok(ideas);
         }
@@ -87,6 +89,7 @@ namespace BrainstormSessions.Api
 
             session.AddIdea(idea);
 
+            _logger.LogInformation("[POST /create] New idea for session with id={sessionId} was created, ideaId={ideaId}", session.Id, idea.Id);
             _logger.LogDebug("[POST /create] New idea for session with id={sessionId} was created: {@idea}", session.Id, idea);
 
             try

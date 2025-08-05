@@ -1,31 +1,27 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
-using Serilog.Events;
-using Serilog.Sinks.EmailPickup;
+using System.IO;
+using System;
+
 
 namespace BrainstormSessions
 {
     public class Program
     {
-        private static readonly string EmailPickupDirectory = @"c:\logs\emailpickup";
-
         public static void Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information()
-                .WriteTo.Console(outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] ({SourceContext}) {Message:lj}{NewLine}{Exception}")
-                .WriteTo.EmailPickup(
-                    fromEmail: "logging-app@gmail.com",
-                    toEmail: "logging-app-admin@gmail.com",
-                    pickupDirectory: EmailPickupDirectory,
-                    subject: "Logging",
-                    fileExtension: ".email",
-                    restrictedToMinimumLevel: LogEventLevel.Warning
-                )
-                .CreateLogger();
+            var configuration = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json")
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", true)
+                .Build();
 
+            Log.Logger = new LoggerConfiguration()
+                            .ReadFrom.Configuration(configuration)
+                            .CreateLogger();
 
             CreateHostBuilder(args).Build().Run();
         }
